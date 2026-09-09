@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>저메추 - AI 저녁 메뉴 추천</title>
+  <style>
+    :root {
+      --primary-color: #ff6b6b;
+      --secondary-color: #4ecdc4;
+      --bg-color: #f7f9fc;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      width: 100%;
+      max-width: 500px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      padding: 30px;
+      text-align: center;
+    }
+
+    header h1 {
+      color: var(--primary-color);
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+
+    .step-card {
+      display: none;
+      animation: fadeIn 0.4s ease-in-out forwards;
+    }
+
+    .step-card.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 15px 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background-color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background-color: #ff5252;
+      color: white;
+    }
+
+    .btn-secondary {
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+    }
+
+    .btn-secondary:hover {
+      background-color: #3dbbb3;
+      color: white;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-color);
+    }
+
+    .result-box {
+      background-color: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 15px 0;
+      text-align: left;
+    }
+
+    .result-box h3 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .food-item {
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      background: white;
+      transition: background 0.2s;
+    }
+
+    .food-item:hover {
+      background-color: #f0f7f7;
+      border-color: var(--secondary-color);
+    }
+
+    .ingredients {
+      font-size: 13px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .recipe-list {
+      margin-top: 10px;
+      padding-left: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>저메추 🍽️</h1>
+      <p>오늘 저녁 뭐 먹을지 고민될 땐, AI 저녁 메뉴 추천!</p>
+    </header>
+
+    <!-- STEP 1: 시킬지 만들어먹을지 결정 -->
+    <div id="step-1" class="step-card active">
+      <h2>STEP 1. 오늘 저녁 어떻게 드시나요?</h2>
+      <div class="btn-group">
+        <button class="btn" onclick="selectType('delivery')">🛵 시켜먹기</button>
+        <button class="btn" onclick="selectType('cook')">🍳 만들어먹기</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: 카테고리 선택 -->
+    <div id="step-2" class="step-card">
+      <h2>STEP 2. 원하는 음식 카테고리</h2>
+      <select id="category-select">
+        <option value="">카테고리 선택 (없으면 선택 안함)</option>
+        <option value="한식">한식</option>
+        <option value="중식">중식</option>
+        <option value="일식">일식</option>
+        <option value="양식">양식</option>
+        <option value="분식">분식</option>
+      </select>
+      <button class="btn btn-primary" onclick="proceedFromCategory()">다음 단계로</button>
+    </div>
+
+    <!-- STEP 3-1: (시켜먹기) 예산 입력 -->
+    <div id="step-3-delivery" class="step-card">
+      <h2>STEP 3. 희망하는 예산을 입력해주세요</h2>
+      <input type="number" id="budget-input" placeholder="예산 입력 (원) ex) 15000" step="1000">
+      <button class="btn btn-primary" onclick="recommendDelivery()">메뉴 추천받기</button>
+    </div>
+
+    <!-- STEP 3-2 & 4-2: (만들어먹기) 메뉴 선택 및 재료 확인 -->
+    <div id="step-3-cook" class="step-card">
+      <h2>STEP 3. 어떤 요리를 해볼까요?</h2>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">음식을 선택하면 상세 레시피를 확인할 수 있습니다.</p>
+      <div id="cook-options"></div>
+    </div>
+
+    <!-- STEP 4-1: (시켜먹기) 추천 결과 -->
+    <div id="step-4-delivery-result" class="step-card">
+      <h2>STEP 4. AI 추천 메뉴!</h2>
+      <div class="result-box">
+        <h3 id="delivery-food-name">음식 이름</h3>
+        <p id="delivery-food-desc">설명</p>
+        <p style="margin-top:10px; font-weight:bold;" id="delivery-food-price">예상 가격: </p>
+      </div>
+      <button class="btn btn-secondary" onclick="resetApp()">처음부터 다시하기</button>
+    </div>
+
+    <!-- STEP 4-2: (만들어먹기) 레시피 결과 -->
+    <div id="step-4-recipe-result" class="step-card">
+      <h2>STEP 4. 레시피 소개</h2>
+      <div class="result-box">
+        <h3 id="recipe-title">음식 이름</h3>
+        <p><strong>[필요한 재료]</strong></p>
+        <p id="recipe-ingredients" style="margin-bottom: 15px; color:#555;"></p>
+        <p><strong>[조리 순서]</strong></p>
+        <ol id="recipe-steps" class="recipe-list"></ol>
+      </div>
+      <button class="btn btn-secondary" onclick="resetApp()">처음부터 다시하기</button>
+    </div>
+  </div>
+
+  <script>
+    // 상태 관리 변수
+    let userType = ''; // 'delivery' or 'cook'
+    let selectedCategory = '';
+
+    // 샘플 데이터베이스 (AI 역할을 수행할 덤 데이터)
+    const database = {
+      delivery: [
+        { name: "김치찌개 세트", category: "한식", price: 12000, desc: "얼큰하고 칼칼한 국물이 일품인 한식 대표 메뉴!" },
+        { name: "삼겹살 구이 도시락", category: "한식", price: 18000, desc: "집에서 냄새 없이 든든하게 즐기는 고기 파티!" },
+        { name: "짜장면 + 탕수육 세트", category: "중식", price: 17000, desc: "실패 없는 클래식 중화요리 조합!" },
+        { name: "연어초밥 (10p)", category: "일식", price: 16000, desc: "부드럽고 신선한 연어가 입안에서 녹는 일식!" },
+        { name: "치즈 피자 & 콜라", category: "양식", price: 20000, desc: "고소한 치즈가 풍부하게 들어간 피자!" },
+        { name: "떡튀순 세트", category: "분식", price: 13000, desc: "매콤달콤 떡볶이와 바삭한 튀김의 환상 조화!" }
+      ],
+      cook: {
+        "한식": [
+          { name: "김치볶음밥", ingredients: "밥, 신김치, 햄, 계란, 참기름, 굴소스", steps: ["김치와 햄을 잘게 썰어 기름에 볶습니다.", "밥과 굴소스를 넣고 함께 볶아줍니다.", "계란 후라이를 올려 마무리를 합니다."] },
+          { name: "된장찌개", ingredients: "된장, 두부, 애호박, 양파, 차돌박이, 대파", steps: ["물에 된장을 풀고 끓입니다.", "썰어둔 야채와 차돌박이를 넣습니다.", "두부를 넣고 한소끔 더 끓여 완성합니다."] }
+        ],
+        "중식": [
+          { name: "마파두부", ingredients: "두부, 돼지고기 다짐육, 두반장, 대파, 마늘, 전분물", steps: ["파, 마늘, 고기를 기름에 볶습니다.", "두반장과 물을 넣고 끓입니다.", "깍둑썰기한 두부를 넣고 전분물로 농도를 맞춥니다."] }
+        ],
+        "일식": [
+          { name: "가츠동 (돈까스덮밥)", ingredients: "돈까스, 계란, 양파, 쯔유, 밥", steps: ["돈까스를 바삭하게 튀겨 썰어둡니다.", "냄비에 쯔유, 물, 양파를 넣고 자작하게 끓입니다.", "돈까스와 풀은 계란을 넣고 살짝 익혀 밥 위에 얹습니다."] }
+        ],
+        "양식": [
+          { name: "알리오 올리오", ingredients: "파스타 면, 마늘, 페페론치노, 올리브유, 소금", steps: ["면을 소금물에 삶습니다.", "팬에 올리브유를 두르고 얇게 썬 마늘과 페페론치노를 볶습니다.", "삶은 면과 면수를 넣고 잘 볶아 완성합니다."] }
+        ],
+        "분식": [
+          { name: "국물 떡볶이", ingredients: "떡볶이 떡, 어묵, 고추장, 고춧가루, 설탕, 대파", steps: ["물에 고추장, 고춧가루, 설탕을 풀어 육수를 냅니다.", "떡과 어묵을 넣고 국물이 자작해질 때까지 끓입니다.", "대파를 넣고 마무리합니다."] }
+        ]
+      }
+    };
+
+    // 카드 전환 함수
+    function showStep(stepId) {
+      document.querySelectorAll('.step-card').forEach(card => card.classList.remove('active'));
+      document.getElementById(stepId).classList.add('active');
+    }
+
+    // STEP 1 선택
+    function selectType(type) {
+      userType = type;
+      showStep('step-2');
+    }
+
+    // STEP 2 카테고리 완료 후 처리
+    function proceedFromCategory() {
+      selectedCategory = document.getElementById('category-select').value;
+
+      // 카테고리가 없는 경우 (랜덤 추천)
+      if (!selectedCategory) {
+        if (userType === 'delivery') {
+          const randomItem = database.delivery[Math.floor(Math.random() * database.delivery.length)];
+          renderDeliveryResult(randomItem);
+        } else {
+          // 만들어먹기 랜덤
+          const categories = Object.keys(database.cook);
+          const randomCat = categories[Math.floor(Math.random() * categories.length)];
+          const randomCookList = database.cook[randomCat];
+          renderCookOptions(randomCookList);
+          showStep('step-3-cook');
+        }
+        return;
+      }
+
+      // 카테고리가 있는 경우 다음 단계 진행
+      if (userType === 'delivery') {
+        showStep('step-3-delivery');
+      } else {
+        const cookList = database.cook[selectedCategory] || [];
+        renderCookOptions(cookList);
+        showStep('step-3-cook');
+      }
+    }
+
+    // STEP 3-1: 시켜먹기 - 예산 반영 추천
+    function recommendDelivery() {
+      const budget = parseInt(document.getElementById('budget-input').value) || 0;
+      
+      let filtered = database.delivery.filter(item => item.category === selectedCategory);
+      if (budget > 0) {
+        filtered = filtered.filter(item => item.price <= budget);
+      }
+
+      if (filtered.length === 0) {
+        alert("조건에 맞는 배달 음식 및 예산 범위를 찾지 못했습니다. 기분 전환을 위해 전체 메뉴 중 하나를 추천해 드려요!");
+        filtered = database.delivery;
+      }
+
+      const selectedFood = filtered[Math.floor(Math.random() * filtered.length)];
+      renderDeliveryResult(selectedFood);
+    }
+
+    function renderDeliveryResult(food) {
+      document.getElementById('delivery-food-name').innerText = food.name;
+      document.getElementById('delivery-food-desc').innerText = food.desc;
+      document.getElementById('delivery-food-price').innerText = `예상 가격: 약 ${food.price.toLocaleString()}원`;
+      showStep('step-4-delivery-result');
+    }
+
+    // STEP 3-2: 만들어먹기 - 요리 옵션들 출력
+    function renderCookOptions(list) {
+      const container = document.getElementById('cook-options');
+      container.innerHTML = '';
+
+      if (list.length === 0) {
+        container.innerHTML = '<p>해당 카테고리의 추천 요리가 없습니다.</p>';
+        return;
+      }
+
+      list.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'food-item';
+        div.onclick = () => showRecipe(item);
+        div.innerHTML = `
+          <strong>${item.name}</strong>
+          <div class="ingredients"><b>필요 재료:</b> ${item.ingredients}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // STEP 4-2: 만들어먹기 - 상세 레시피 표시
+    function showRecipe(item) {
+      document.getElementById('recipe-title').innerText = item.name;
+      document.getElementById('recipe-ingredients').innerText = item.ingredients;
+      
+      const stepsOl = document.getElementById('recipe-steps');
+      stepsOl.innerHTML = '';
+      item.steps.forEach(step => {
+        const li = document.createElement('li');
+        li.innerText = step;
+        stepsOl.appendChild(li);
+      });
+
+      showStep('step-4-recipe-result');
+    }
+
+    // 앱 초기화
+    function resetApp() {
+      userType = '';
+      selectedCategory = '';
+      document.getElementById('category-select').value = '';
+      document.getElementById('budget-input').value = '';
+      showStep('step-1');
+    }
+  </script>
+</body>
+</html>
